@@ -1,0 +1,6 @@
+here's a list of artists, can you make a new list of just the first artist listed on each line./n
+remove text after 'ft' on each line./n
+remove text after '\u' on each line./n
+completely remove any list items that have the word Tribute in them/n
+Everywhere there is an "&" symbol, change "&" to "and"/n
+Return them in an array in a JSON object named Artists
