@@ -16,8 +16,18 @@ os.environ['SPOTIPY_REDIRECT_URI'] = 'https://example.com/callback/'
 scope = "playlist-modify-public playlist-modify-private"
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 
+playlist_name = "WWOZ Weekend Warrior"
 
-def generate_playlist():
+def determine_playlist_exists():
+    # See if playlist exists
+    playlists = sp.current_user_playlists()
+    for playlist in playlists['items']:
+        if playlist['name'] == playlist_name:
+            return True, playlist['id']
+        else:
+            return False, 'none'
+
+def generate_playlist(exists, id):
  
     # Opening JSON file
     f = open('scripts/ai/response_data/combined_response.json')
@@ -52,33 +62,41 @@ def generate_playlist():
         print(search) 
         if any(artist in s for s in search):
             print('name found')
-
-            if results["artists"]["items"]:
-                artist_id = results["artists"]["items"][0]["id"]
-                top_tracks = sp.artist_top_tracks(artist_id)
-                if top_tracks["tracks"]:
-                    for i in range(min(num_songs, len(top_tracks["tracks"]))):
-                        try:
-                            track_ids.append(top_tracks["tracks"][i]["id"])
-                            print('adding ', top_tracks["tracks"][i]["id"], ' for artist ', artist)
-                        except Exception as e:
-                            print('Adding song failed: ')
-                            print(e)
-        else:
-            print(f"Artist: '{artist}' not Found, skipping")
-            not_found.append(artist)
+            for result in results["artists"]["items"]:
+                if result['name'] == artist:
+                    print(result['name'])
+                    artist_id = result["id"]
+                    top_tracks = sp.artist_top_tracks(artist_id)
+                    if top_tracks["tracks"]:
+                        for i in range(min(num_songs, len(top_tracks["tracks"]))):
+                            try:
+                                track_ids.append(top_tracks["tracks"][i]["id"])
+                                print('adding ', top_tracks["tracks"][i]["id"], ' for artist ', artist)
+                            except Exception as e:
+                                print('Adding song failed: ')
+                                print(e)
+            else:
+                print(f"Artist: '{artist}' not Found, skipping")
+                not_found.append(artist)
 
     print(f"'{len(not_found)}' out of '{len(artists)}' artists not found:")
     print(not_found)
 
     # Create a new playlist and add the top 5 tracks from each artist
-    playlist_name = "test-playlist-wwoz-v4"
-    playlist = sp.user_playlist_create(user=sp.me()["id"], name=playlist_name)
+    # Alternatively, update the existing playlist
+    if exists == False:
+        playlist = sp.user_playlist_create(user=sp.me()["id"], name=playlist_name)
+        # Add tracks to playlist in batches of 100 (to help with large number of artists)
+        for i in range(0, len(track_ids), 100):
+            sp.playlist_add_items(playlist["id"], track_ids[i:i + 100])
+        print(f"Playlist '{playlist_name}' created successfully with {len(track_ids)} tracks!")
+    else:
+        for i in range(0, len(track_ids), 100):
+            sp.playlist_replace_items(id, track_ids[i:i + 100])
+        print(f"Playlist '{playlist_name}' updated successfully with {len(track_ids)} tracks!")
 
-    # Add tracks to playlist in batches of 100 (to help with large number of artists)
-    for i in range(0, len(track_ids), 100):
-        sp.playlist_add_items(playlist["id"], track_ids[i:i + 100])
-
-    print(f"Playlist '{playlist_name}' created successfully with {len(track_ids)} tracks!")
-
-generate_playlist()
+    
+playlist_exists = determine_playlist_exists()
+exists = playlist_exists[0]
+id = playlist_exists[1]
+generate_playlist(exists, id)
