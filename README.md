@@ -35,7 +35,7 @@ Run setup, providing api credentials
 Run `run.py` script
 
 ```bash
-  python run.py
+  sh run.sh
 ```
 
 ## Acknowledgements
